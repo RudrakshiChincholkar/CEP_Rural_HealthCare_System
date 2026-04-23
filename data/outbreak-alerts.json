@@ -1,0 +1,7 @@
+[
+  { "area": "Dharavi", "disease": "Dengue", "risk": "HIGH", "reason": "Recent stagnant water clusters and mosquito density reports in local mock surveillance data." },
+  { "area": "Kurla", "disease": "Seasonal Flu", "risk": "MEDIUM", "reason": "Higher mock outpatient fever/cold trends during the last 2 weeks." },
+  { "area": "Navi Mumbai", "disease": "Allergy/Respiratory Irritation", "risk": "MEDIUM", "reason": "Mock pollution and pollen spikes in monitored zones." },
+  { "area": "Andheri", "disease": "Viral Fever", "risk": "LOW", "reason": "Mild increase in clinic visits, but no severe cluster signs." },
+  { "area": "Chembur", "disease": "Gastrointestinal Infection", "risk": "LOW", "reason": "Localized mock food/water hygiene complaints." }
+]

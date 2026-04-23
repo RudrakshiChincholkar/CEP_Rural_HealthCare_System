@@ -4,69 +4,44 @@ import { useEffect, useState } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 
-const GOOGLE_MAPS_API_KEY = ""
-
-declare global {
-  interface Window {
-    initMap: () => void
-  }
+type HealthCenter = {
+  name: string
+  address: string
+  city: string
+  type: "public" | "private" | "clinic" | "medical"
+  contact: string
+  distanceKm: number
+  latitude: number
+  longitude: number
 }
 
 export default function GMap() {
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [places, setPlaces] = useState<any[]>([])
+  const [city, setCity] = useState("Mumbai")
+  const [places, setPlaces] = useState<HealthCenter[]>([])
   const [error, setError] = useState<string | null>(null)
   const [selectedFacility, setSelectedFacility] = useState<string>("all")
-  const [isMounted, setIsMounted] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
+    fetchNearbyPlaces(city, selectedFacility)
+  }, [city, selectedFacility])
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude
-          const lng = position.coords.longitude
-          setLocation({ lat, lng })
-          fetchNearbyPlaces(lat, lng, selectedFacility)
-        },
-        () => setError("Location access denied"),
-        { enableHighAccuracy: true },
-      )
-    } else {
-      setError("Geolocation is not supported")
-    }
-  }, [selectedFacility])
-
-  const fetchNearbyPlaces = async (lat: number, lng: number, facilityType: string) => {
+  const fetchNearbyPlaces = async (cityName: string, facilityType: string) => {
+    setLoading(true)
+    setError(null)
     try {
-      const response = await fetch(`/api/health-centers?lat=${lat}&lng=${lng}&type=${facilityType}`)
+      const response = await fetch(`/api/health-centers?city=${encodeURIComponent(cityName)}&type=${facilityType}`)
+      if (!response.ok) {
+        throw new Error(`Failed with status ${response.status}`)
+      }
       const data = await response.json()
-
-      const sortedPlaces = data.results
-        .map((place: any) => ({
-          ...place,
-          distance: getDistance(lat, lng, place.lat, place.lng),
-          mapsLink: `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`,
-        }))
-        .sort((a, b) => a.distance - b.distance)
-
-      setPlaces(sortedPlaces)
+      setPlaces(data.results || [])
     } catch (error) {
-      setError("")
+      setError("Unable to load nearby facilities. Please try again.")
+      setPlaces([])
+    } finally {
+      setLoading(false)
     }
-  }
-
-  const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-    const toRad = (value: number) => (value * Math.PI) / 180
-    const R = 6371
-    const dLat = toRad(lat2 - lat1)
-    const dLng = toRad(lng2 - lng1)
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
   }
 
   return (
@@ -77,7 +52,13 @@ export default function GMap() {
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      <div className="mb-4">
+      <div className="mb-4 w-full max-w-5xl flex flex-col md:flex-row gap-3 md:items-center">
+        <input
+          className="p-2 border border-gray-700 rounded-lg bg-black text-white"
+          value={city}
+          placeholder="Enter city (default Mumbai)"
+          onChange={(e) => setCity(e.target.value || "Mumbai")}
+        />
         <label htmlFor="facility-type" className="mr-2 text-white">
           Select Facility Type:
         </label>
@@ -95,25 +76,10 @@ export default function GMap() {
         </select>
       </div>
 
-      {/* Update the map and places list for better responsiveness */}
-      <div className="flex flex-col md:flex-row w-full max-w-7xl mt-4 gap-4 sm:gap-6">
-        {/* Map Section (Left) */}
-        {isMounted && location && (
-          <div className="w-full md:w-[55%] h-[350px] sm:h-[450px] md:h-[550px] rounded-lg overflow-hidden shadow-lg">
-            <iframe
-              width="100%"
-              height="100%"
-              className="rounded-lg border border-gray-700 bg-black"
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src={`https://www.google.com/maps/embed/v1/search?key=${GOOGLE_MAPS_API_KEY}&q=hospital+OR+clinic+OR+doctor+OR+medical+center${selectedFacility !== "all" ? `+${selectedFacility}` : ""}&center=${location.lat},${location.lng}&zoom=14`}
-            ></iframe>
-          </div>
-        )}
-
-        {/* Places List (Right) */}
-        <div className="w-full md:w-[45%] h-[350px] sm:h-[450px] md:h-[550px] overflow-y-auto custom-scrollbar">
+      <div className="w-full max-w-5xl mt-4">
+        {loading && <p className="text-sm text-gray-300 mb-3">Loading nearby facilities...</p>}
+        {!loading && places.length === 0 && <p className="text-sm text-gray-300 mb-3">No facilities found for this city.</p>}
+        <div className="w-full h-[350px] sm:h-[450px] md:h-[550px] overflow-y-auto custom-scrollbar">
           <ul className="space-y-3 sm:space-y-4 p-2 sm:p-4">
             {places.map((place, index) => (
               <li
@@ -122,30 +88,18 @@ export default function GMap() {
               >
                 <div className="flex flex-col">
                   <strong className="text-base sm:text-lg md:text-xl font-semibold text-blue-400">{place.name}</strong>
-                  <p className="text-sm sm:text-base md:text-lg italic text-gray-300">{place.vicinity}</p>
-                  <p className="text-xs sm:text-sm text-gray-400">{place.distance.toFixed(2)} km away</p>
+                  <p className="text-sm sm:text-base md:text-lg italic text-gray-300">{place.address}</p>
+                  <p className="text-xs sm:text-sm text-gray-400">{place.distanceKm.toFixed(1)} km away</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Contact: {place.contact}</p>
 
-                  {/* View on Google Maps Link */}
                   <a
-                    href={place.mapsLink}
+                    href={`https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=14/${place.latitude}/${place.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:underline mt-2 text-xs sm:text-sm"
                   >
-                    View on Google Maps
+                    Open in External Maps
                   </a>
-
-                  {/* Visit Website Link (if available) */}
-                  {place.website && (
-                    <a
-                      href={place.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline mt-1 text-xs sm:text-sm"
-                    >
-                      Visit Website
-                    </a>
-                  )}
                 </div>
               </li>
             ))}

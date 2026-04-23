@@ -23,8 +23,8 @@ We are integrating cutting-edge AI and location-based services to make healthcar
 - Connects rural users with urban specialists
 
 ### 🗺️ Locate Nearest Healthcare Facilities (Aarogya Map)
-- Uses Google Maps to find nearby hospitals, clinics, and health centers
-- Powerful tool to locate the nearest healthcare facilities based on user location and medical needs
+- Uses in-app curated location data to show nearby hospitals, clinics, and health centers
+- Supports city-based search with graceful fallback dataset for reliable local demos
 - Helps users save time during emergencies
 
 ### 📰 Health Education & Awareness (Aarogya Pulse)
@@ -57,7 +57,7 @@ GramAarogya is built using modern, scalable technologies:
 
 - **Frontend**: React, Next.js, TypeScript, Framer, Vercel
 - **Backend**: Flask, JavaScript, Python
-- **AI/ML**: aiXplain custom agents, Google Maps integration
+- **AI/ML**: aiXplain custom agents with local fallback mocks
 
 ## 🛠️ Setup and Installation
 
@@ -70,7 +70,6 @@ cd gram-aarogya
 2. Set up environment variables in a `.env` file:
 ```
 TEAM_API_KEY=your_team_api_key
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 DOC_MODEL_ID=your_doc_model_id
 SUMM_MODEL_ID=your_summ_model_id
 NEWS_MODEL_ID=your_news_model_id
@@ -146,7 +145,7 @@ Body:
 ## 🙏 Acknowledgments
 
 - aiXplain for AI model support & custom model creation
-- Google Maps API for location services
+- OpenStreetMap links and local healthcare fallback data for location services
 
 ---
 

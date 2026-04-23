@@ -17,7 +17,7 @@ interface NewsArticle {
 }
 
 interface NewsResponse {
-  news: string
+  news: NewsArticle[]
 }
 
 const translations = [
@@ -85,7 +85,6 @@ const translations = [
 
 export default function NewsHelp() {
   const [language, setLanguage] = useState("Hindi")
-  const [apiResponse, setApiResponse] = useState<NewsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [articles, setArticles] = useState<NewsArticle[]>([])
@@ -119,49 +118,13 @@ export default function NewsHelp() {
     setIndex(langMap[language] || 0)
   }, [language])
 
-  const parseNewsResponse = (responseText: string) => {
-    try {
-      // Split the response into articles
-      const articleBlocks = responseText.split("\n\nTitle: ")
-      const parsedArticles: NewsArticle[] = []
-
-      articleBlocks.forEach((block, index) => {
-        if (index === 0 && !block.startsWith("Title: ")) return
-
-        const articleText = index === 0 ? block : "Title: " + block
-        const titleMatch = articleText.match(/Title: (.*?)(?:\n|$)/)
-        const descriptionMatch = articleText.match(/Description: (.*?)(?:\n|$)/)
-        const contentMatch = articleText.match(/Content: ([\s\S]*?)(?:\nURL:|$)/)
-        const urlMatch = articleText.match(/URL: (.*?)(?:\n|$)/)
-        const sourceMatch = articleText.match(/Source: (.*?)(?:\n|$)/)
-        const dateMatch = articleText.match(/Date: (.*?)(?:\n|$)/)
-
-        if (titleMatch) {
-          parsedArticles.push({
-            title: titleMatch[1] || "",
-            description: descriptionMatch ? descriptionMatch[1] : "",
-            content: contentMatch ? contentMatch[1] : "",
-            url: urlMatch ? urlMatch[1] : "",
-            source: sourceMatch ? sourceMatch[1] : "",
-            date: dateMatch ? dateMatch[1] : "",
-          })
-        }
-      })
-
-      setArticles(parsedArticles)
-    } catch (error) {
-      console.error("Error parsing news response:", error)
-      setError("समाचार डेटा पार्स करने में त्रुटि हुई। कृपया पुनः प्रयास करें।")
-    }
-  }
-
   const handleGetNews = async () => {
     setLoading(true)
     setError(null)
 
     try {
       // Fetch news from the API
-      const res = await fetch("http://127.0.0.1:5000/news", {
+      const res = await fetch("/api/news", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language }),
@@ -171,12 +134,8 @@ export default function NewsHelp() {
         throw new Error(`HTTP error! status: ${res.status}`)
       }
 
-      const data = await res.json()
-      setApiResponse(data)
-
-      if (data.news) {
-        parseNewsResponse(data.news)
-      }
+      const data: NewsResponse = await res.json()
+      setArticles(data.news || [])
     } catch (error) {
       console.error("Error fetching news:", error)
       setError("समाचार प्राप्त करने में त्रुटि हुई। कृपया पुनः प्रयास करें।")

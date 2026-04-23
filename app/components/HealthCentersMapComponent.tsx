@@ -21,25 +21,14 @@ const DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon
 
 export default function HealthCentersMapComponent() {
-  const [userLocation, setUserLocation] = useState<[number, number]>([20, 77])
+  const [userLocation] = useState<[number, number]>([19.076, 72.8777])
   const [healthCenters, setHealthCenters] = useState<{ lat: number; lng: number; name: string }[]>([])
 
   useEffect(() => {
-    // Get user's location
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords
-        setUserLocation([latitude, longitude])
-
-        // Fetch nearby health centers (replace with actual API or data source)
-        setHealthCenters([
-          { lat: latitude + 0.01, lng: longitude + 0.01, name: "Health Center 1" },
-          { lat: latitude - 0.02, lng: longitude - 0.01, name: "Health Center 2" },
-        ])
-      },
-      (error) => console.error(error),
-      { enableHighAccuracy: true },
-    )
+    setHealthCenters([
+      { lat: 19.086, lng: 72.8877, name: "City Care Clinic" },
+      { lat: 19.066, lng: 72.8677, name: "Sunrise Hospital" },
+    ])
   }, [])
 
   return (

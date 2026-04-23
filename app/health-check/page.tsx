@@ -32,6 +32,7 @@ export default function HealthCheck() {
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0)
   const [currentMessage, setCurrentMessage] = useState("")
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const messageRef = useRef(null)
 
@@ -76,20 +77,24 @@ export default function HealthCheck() {
     setLoading(true)
     setResponse("")
     setSummary("")
+    setError(null)
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/ask", {
+      const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: input }),
       })
 
+      if (!res.ok) {
+        throw new Error(`Failed with status ${res.status}`)
+      }
+
       const data = await res.json()
       setResponse(data.response || "No response available.")
       setSummary(data.summary || "No detailed response available.")
     } catch (error) {
-      console.error("Error fetching response:", error)
-      setResponse("Error getting AI health advice.")
+      setError("Unable to fetch AI advice right now. Please try again.")
     }
 
     setLoading(false)
@@ -128,6 +133,8 @@ export default function HealthCheck() {
                 <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-500 rounded-full animate-bounce delay-200"></div>
               </div>
             )}
+
+            {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
             {(response || summary) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">

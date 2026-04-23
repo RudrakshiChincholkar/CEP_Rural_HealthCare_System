@@ -56,6 +56,9 @@ export default function Navbar() {
 
         {/* Desktop Navbar Links */}
         <nav className="hidden sm:flex flex-1 items-center justify-center space-x-4 sm:space-x-6 text-sm font-medium">
+          <Link href="/dashboard" className="transition-colors hover:text-primary">
+            Dashboard
+          </Link>
           <Link href="/health-check" className="transition-colors hover:text-primary">
             AarogyaMitraAI
           </Link>
@@ -73,6 +76,30 @@ export default function Navbar() {
           </Link>
           <Link href="/our-team" className="transition-colors hover:text-primary">
             AarogyaParivar
+          </Link>
+          <Link href="/triage" className="transition-colors hover:text-primary">
+            Triage
+          </Link>
+          <Link href="/nearby-care" className="transition-colors hover:text-primary">
+            Nearby Care
+          </Link>
+          <Link href="/alerts" className="transition-colors hover:text-primary">
+            Alerts
+          </Link>
+          <Link href="/mental-health" className="transition-colors hover:text-primary">
+            Mental Health
+          </Link>
+          <Link href="/history" className="transition-colors hover:text-primary">
+            History
+          </Link>
+          <Link href="/profile" className="transition-colors hover:text-primary">
+            Profile
+          </Link>
+          <Link href="/leaderboard" className="transition-colors hover:text-primary">
+            Leaderboard
+          </Link>
+          <Link href="/telemedicine" className="transition-colors hover:text-primary">
+            Telemedicine
           </Link>
         </nav>
 
@@ -93,6 +120,13 @@ export default function Navbar() {
               id="mobile-menu"
               className="absolute top-12 left-1/2 transform -translate-x-1/2 w-[90%] bg-gray-900 shadow-lg rounded-lg text-center py-3 border border-gray-700 z-50"
             >
+              <Link
+                href="/dashboard"
+                className="block py-2 text-base font-medium hover:text-primary transition"
+                onClick={() => setDropdownOpen(false)}
+              >
+                Dashboard
+              </Link>
               <Link
                 href="/health-check"
                 className="block py-2 text-base font-medium hover:text-primary transition"
@@ -134,6 +168,30 @@ export default function Navbar() {
                 onClick={() => setDropdownOpen(false)}
               >
                 AarogyaParivar
+              </Link>
+              <Link href="/triage" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Triage
+              </Link>
+              <Link href="/nearby-care" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Nearby Care
+              </Link>
+              <Link href="/alerts" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Alerts
+              </Link>
+              <Link href="/mental-health" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Mental Health
+              </Link>
+              <Link href="/history" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                History
+              </Link>
+              <Link href="/profile" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Profile
+              </Link>
+              <Link href="/leaderboard" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Leaderboard
+              </Link>
+              <Link href="/telemedicine" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Telemedicine
               </Link>
             </div>
           )}

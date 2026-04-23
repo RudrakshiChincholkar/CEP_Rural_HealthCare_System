@@ -8,27 +8,44 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import Link from "next/link"
 
+type Doctor = {
+  name: string
+  specialization: string
+  hospital: string
+  city: string
+  contact: string
+  experience: string
+  consultationFee: string
+  aboutUrl: string
+}
+
 export default function FindDoctor() {
   const [condition, setCondition] = useState("")
-  const [location, setLocation] = useState("")
-  const [apiResponse, setApiResponse] = useState(null)
+  const [location, setLocation] = useState("Mumbai")
+  const [apiResponse, setApiResponse] = useState<{ doctors: Doctor[]; message?: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const handleFindDoctors = async () => {
     setLoading(true)
+    setError(null)
     try {
-      const res = await fetch("http://127.0.0.1:5000/doctors", {
+      const res = await fetch("/api/doctors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ condition, location }),
       })
 
+      if (!res.ok) {
+        throw new Error(`Failed with status ${res.status}`)
+      }
+
       const data = await res.json()
       setApiResponse(data)
     } catch (error) {
-      console.error("Error fetching doctors:", error)
-      setApiResponse({ error: "Failed to fetch doctors. Please try again." })
+      setApiResponse(null)
+      setError("Unable to fetch doctors right now. Please try again.")
     }
     setLoading(false)
   }
@@ -76,78 +93,62 @@ export default function FindDoctor() {
       {/* Results Section - Expanded Area Below */}
       <div className="flex-grow dark:bg-black text-white px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          {apiResponse && apiResponse.doctors ? (
+          {error ? (
+            <div className="dark:bg-black text-white shadow-md p-8 text-center border border-red-800 rounded-lg">
+              <p className="text-red-400">{error}</p>
+            </div>
+          ) : apiResponse && apiResponse.doctors ? (
             <div>
               <h2 className="text-2xl font-semibold mb-6 text-white pb-2 border-b border-gray-700">Doctors Found</h2>
+              {apiResponse.message && <p className="mb-4 text-sm text-yellow-400">{apiResponse.message}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {apiResponse.doctors
-                  .split("\n\n--------------------------------------------------\n")
-                  .map((doctor, index) => {
-                    const doctorInfo = {}
-                    doctor.split("\n").forEach((line) => {
-                      if (line.includes(": ")) {
-                        const [key, value] = line.split(": ")
-                        doctorInfo[key] = value
-                      }
-                    })
+                {apiResponse.doctors.map((doctor, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6 flex flex-col border border-gray-700"
+                  >
+                    <h3 className="text-lg sm:text-xl font-semibold text-blue-400 mb-2">{doctor.name}</h3>
+                    <div className="mb-3 sm:mb-4">
+                      <span className="inline-block bg-blue-900 text-blue-200 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+                        {doctor.specialization}
+                      </span>
+                    </div>
 
-                    return (
-                      <div
-                        key={index}
-                        className="bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6 flex flex-col border border-gray-700"
+                    <div className="space-y-2 sm:space-y-3 text-gray-300 flex-grow text-sm sm:text-base">
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Hospital:</span>
+                        <span>{doctor.hospital}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Experience:</span>
+                        <span>{doctor.experience}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Fee:</span>
+                        <span>{doctor.consultationFee}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">City:</span>
+                        <span>{doctor.city}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Contact:</span>
+                        <span>{doctor.contact}</span>
+                      </p>
+                    </div>
+
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-700">
+                      <Link
+                        href={doctor.aboutUrl}
+                        target="_blank"
+                        className="text-blue-400 hover:text-blue-300 font-medium text-xs sm:text-sm inline-flex items-center"
                       >
-                        <h3 className="text-lg sm:text-xl font-semibold text-blue-400 mb-2">{doctorInfo["Name"]}</h3>
-
-                        <div className="mb-3 sm:mb-4">
-                          <span className="inline-block bg-blue-900 text-blue-200 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
-                            {doctorInfo["Specialization"]}
-                          </span>
-                        </div>
-
-                        <div className="space-y-2 sm:space-y-3 text-gray-300 flex-grow text-sm sm:text-base">
-                          <p className="flex items-start">
-                            <span className="font-medium min-w-16 sm:min-w-24 inline-block">Experience:</span>
-                            <span>{doctorInfo["Experience"]}</span>
-                          </p>
-
-                          <p className="flex items-start">
-                            <span className="font-medium min-w-16 sm:min-w-24 inline-block">Fee:</span>
-                            <span>{doctorInfo["Consultation Fee"]}</span>
-                          </p>
-
-                          <p className="flex items-start">
-                            <span className="font-medium min-w-16 sm:min-w-24 inline-block">Location:</span>
-                            <span className="text-xs sm:text-sm">{doctorInfo["Location"]}</span>
-                          </p>
-                        </div>
-
-                        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-700">
-                          <Link
-                            href={doctorInfo["About Doctor"]}
-                            target="_blank"
-                            className="text-blue-400 hover:text-blue-300 font-medium text-xs sm:text-sm inline-flex items-center"
-                          >
-                            View Profile
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3 sm:h-4 sm:w-4 ml-1"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </Link>
-                        </div>
-                      </div>
-                    )
-                  })}
+                        View Profile
+                      </Link>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
