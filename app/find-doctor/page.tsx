@@ -15,14 +15,17 @@ type Doctor = {
   city: string
   contact: string
   experience: string
-  consultationFee: string
+  consultationFee: number
+  rating: number
+  languages: string[]
+  availability: string
   aboutUrl: string
 }
 
 export default function FindDoctor() {
   const [condition, setCondition] = useState("")
   const [location, setLocation] = useState("Mumbai")
-  const [apiResponse, setApiResponse] = useState<{ doctors: Doctor[]; message?: string } | null>(null)
+  const [apiResponse, setApiResponse] = useState<{ doctors: Doctor[]; message?: string; matchedSpecialty?: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -100,6 +103,9 @@ export default function FindDoctor() {
           ) : apiResponse && apiResponse.doctors ? (
             <div>
               <h2 className="text-2xl font-semibold mb-6 text-white pb-2 border-b border-gray-700">Doctors Found</h2>
+              {apiResponse.matchedSpecialty && (
+                <p className="mb-3 text-sm text-green-300">Best specialty for your symptoms: {apiResponse.matchedSpecialty}</p>
+              )}
               {apiResponse.message && <p className="mb-4 text-sm text-yellow-400">{apiResponse.message}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -126,7 +132,19 @@ export default function FindDoctor() {
                       </p>
                       <p className="flex items-start">
                         <span className="font-medium min-w-16 sm:min-w-24 inline-block">Fee:</span>
-                        <span>{doctor.consultationFee}</span>
+                        <span>INR {doctor.consultationFee}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Rating:</span>
+                        <span>{doctor.rating} / 5</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Languages:</span>
+                        <span>{doctor.languages.join(", ")}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Availability:</span>
+                        <span>{doctor.availability}</span>
                       </p>
                       <p className="flex items-start">
                         <span className="font-medium min-w-16 sm:min-w-24 inline-block">City:</span>

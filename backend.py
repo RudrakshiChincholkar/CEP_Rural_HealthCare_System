@@ -2,6 +2,7 @@ import os
 import requests
 import re
 import ast
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,6 +30,10 @@ except Exception:
 
 app = Flask(__name__)
 CORS(app)
+
+LLAMA_API_KEY = os.getenv("LLAMA_API_KEY")
+LLAMA_MODEL = os.getenv("LLAMA_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
+LLAMA_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
 def remove_markdown(text):
     text = re.sub(r'\*\*.*?\*\*', '', text)
@@ -58,6 +63,35 @@ def clean_and_format_response(raw_response):
     formatted_articles = re.sub(r"\n{3,}", "\n\n", articles_part)
     formatted_summary = re.sub(r"\n{3,}", "\n\n", summary_part)
     return f"{formatted_articles}\n\n{'-'*100}\n\n{formatted_summary}"
+
+def call_llama_with_retry(system_prompt, user_prompt, max_tokens=400):
+    if not LLAMA_API_KEY:
+        return None
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LLAMA_API_KEY}",
+    }
+    payload = {
+        "model": LLAMA_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.3,
+        "max_tokens": max_tokens,
+    }
+
+    for attempt in range(2):
+        try:
+            response = requests.post(LLAMA_ENDPOINT, headers=headers, data=json.dumps(payload), timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
+        except Exception as exc:
+            print(f"Llama request failed (attempt {attempt + 1}/2): {exc}")
+
+    return None
 
 def get_nearest_health_centers(latitude, longitude):
     return [
@@ -90,7 +124,14 @@ def ask():
         if not question:
             return jsonify({"error": "No question provided"}), 400
         output_language = detect(question)
-        if main_agent and summ_model:
+        llama_answer = call_llama_with_retry(
+            "You are a medically cautious assistant. Do not provide definitive diagnosis. Keep response practical and concise.",
+            f"Question: {question}\nRespond in language code: {output_language}",
+        )
+        if llama_answer:
+            agent_answer = format_text(remove_markdown(llama_answer))
+            summary = "Llama-generated response with medical caution. Please consult a qualified doctor for diagnosis."
+        elif main_agent and summ_model:
             formatted_query = f"{question} Response in {output_language}"
             agent_response = main_agent.run(formatted_query)
             formatted_response = agent_response["data"]["output"]

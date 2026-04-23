@@ -57,7 +57,7 @@ GramAarogya is built using modern, scalable technologies:
 
 - **Frontend**: React, Next.js, TypeScript, Framer, Vercel
 - **Backend**: Flask, JavaScript, Python
-- **AI/ML**: aiXplain custom agents with local fallback mocks
+- **AI/ML**: Llama-first generation (OpenRouter free model) with fallback logic, plus aiXplain compatibility
 
 ## 🛠️ Setup and Installation
 
@@ -74,6 +74,8 @@ DOC_MODEL_ID=your_doc_model_id
 SUMM_MODEL_ID=your_summ_model_id
 NEWS_MODEL_ID=your_news_model_id
 AGENT_MODEL_ID=your_agent_model_id
+LLAMA_API_KEY=your_openrouter_or_free_llama_key
+LLAMA_MODEL=meta-llama/llama-3.1-8b-instruct:free
 ```
 
 3. Install dependencies

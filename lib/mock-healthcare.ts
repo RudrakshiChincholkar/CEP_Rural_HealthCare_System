@@ -5,7 +5,10 @@ export type Doctor = {
   city: string
   contact: string
   experience: string
-  consultationFee: string
+  consultationFee: number
+  rating: number
+  languages: string[]
+  availability: string
   aboutUrl: string
 }
 
@@ -28,7 +31,10 @@ export const DOCTORS: Doctor[] = [
     city: "Mumbai",
     contact: "+91-9000000001",
     experience: "9 years",
-    consultationFee: "INR 700",
+    consultationFee: 700,
+    rating: 4.4,
+    languages: ["English", "Hindi", "Marathi"],
+    availability: "Mon-Sat, 10:00 AM - 6:00 PM",
     aboutUrl: "https://example.com/doctors/dr-sharma",
   },
   {
@@ -38,7 +44,10 @@ export const DOCTORS: Doctor[] = [
     city: "Mumbai",
     contact: "+91-9000000002",
     experience: "12 years",
-    consultationFee: "INR 1000",
+    consultationFee: 1000,
+    rating: 4.6,
+    languages: ["English", "Hindi", "Gujarati"],
+    availability: "Mon-Fri, 11:00 AM - 7:00 PM",
     aboutUrl: "https://example.com/doctors/dr-patel",
   },
   {
@@ -48,7 +57,10 @@ export const DOCTORS: Doctor[] = [
     city: "Pune",
     contact: "+91-9000000003",
     experience: "11 years",
-    consultationFee: "INR 900",
+    consultationFee: 900,
+    rating: 4.5,
+    languages: ["English", "Hindi", "Tamil"],
+    availability: "Mon-Sat, 9:00 AM - 4:00 PM",
     aboutUrl: "https://example.com/doctors/dr-iyer",
   },
   {
@@ -58,8 +70,50 @@ export const DOCTORS: Doctor[] = [
     city: "Mumbai",
     contact: "+91-9000000004",
     experience: "15 years",
-    consultationFee: "INR 1500",
+    consultationFee: 1500,
+    rating: 4.7,
+    languages: ["English", "Hindi", "Urdu"],
+    availability: "Mon-Sat, 12:00 PM - 8:00 PM",
     aboutUrl: "https://example.com/doctors/dr-khan",
+  },
+  {
+    name: "Dr. Fernandes",
+    specialization: "ENT Specialist",
+    hospital: "Seaside Multispeciality",
+    city: "Mumbai",
+    contact: "+91-9000000005",
+    experience: "10 years",
+    consultationFee: 1200,
+    rating: 4.6,
+    languages: ["English", "Hindi", "Marathi"],
+    availability: "Mon-Fri, 9:00 AM - 5:00 PM",
+    aboutUrl: "https://example.com/doctors/dr-fernandes",
+  },
+  {
+    name: "Dr. Kulkarni",
+    specialization: "Psychologist",
+    hospital: "MindCare Clinic",
+    city: "Mumbai",
+    contact: "+91-9000000006",
+    experience: "8 years",
+    consultationFee: 900,
+    rating: 4.8,
+    languages: ["English", "Hindi", "Marathi"],
+    availability: "Tue-Sun, 2:00 PM - 9:00 PM",
+    aboutUrl: "https://example.com/doctors/dr-kulkarni",
+  },
+  {
+    name: "Dr. Joshi",
+    specialization: "Pulmonologist",
+    hospital: "Airway Health Center",
+    city: "Mumbai",
+    contact: "+91-9000000007",
+    experience: "13 years",
+    consultationFee: 1300,
+    rating: 4.5,
+    languages: ["English", "Hindi", "Marathi"],
+    availability: "Mon-Sat, 10:30 AM - 6:30 PM",
+    aboutUrl: "https://example.com/doctors/dr-joshi",
   },
 ]
 

@@ -27,6 +27,11 @@ export default function HealthCheck() {
   const [input, setInput] = useState("")
   const [response, setResponse] = useState("")
   const [summary, setSummary] = useState("")
+  const [urgency, setUrgency] = useState<"LOW" | "MEDIUM" | "HIGH" | null>(null)
+  const [followUps, setFollowUps] = useState<string[]>([])
+  const [language, setLanguage] = useState<"English" | "Hindi" | "Marathi">("English")
+  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([])
+  const [medicineReminder, setMedicineReminder] = useState({ medicine: "", time: "" })
   const [loading, setLoading] = useState(false)
   const [index, setIndex] = useState(0)
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0)
@@ -35,6 +40,12 @@ export default function HealthCheck() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const messageRef = useRef(null)
+
+  useEffect(() => {
+    // Restore previous chat to provide lightweight context memory across sessions.
+    const saved = localStorage.getItem("health-chat-history")
+    if (saved) setChatHistory(JSON.parse(saved))
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,13 +88,15 @@ export default function HealthCheck() {
     setLoading(true)
     setResponse("")
     setSummary("")
+    setUrgency(null)
+    setFollowUps([])
     setError(null)
 
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: input }),
+        body: JSON.stringify({ question: input, language, history: chatHistory.slice(-6) }),
       })
 
       if (!res.ok) {
@@ -93,11 +106,52 @@ export default function HealthCheck() {
       const data = await res.json()
       setResponse(data.response || "No response available.")
       setSummary(data.summary || "No detailed response available.")
+      setUrgency(data.urgency || null)
+      setFollowUps(data.followUpQuestions || [])
+
+      const updatedHistory = [
+        ...chatHistory,
+        { role: "user", content: input },
+        { role: "assistant", content: data.response || "" },
+      ].slice(-20)
+      setChatHistory(updatedHistory)
+      localStorage.setItem("health-chat-history", JSON.stringify(updatedHistory))
+
+      const consultHistory = JSON.parse(localStorage.getItem("patient-history") || "[]")
+      consultHistory.unshift({
+        createdAt: new Date().toISOString(),
+        symptoms: input,
+        explanation: data.response || "",
+        urgency: data.urgency || "MEDIUM",
+      })
+      localStorage.setItem("patient-history", JSON.stringify(consultHistory.slice(0, 50)))
     } catch (error) {
       setError("Unable to fetch AI advice right now. Please try again.")
     }
 
     setLoading(false)
+  }
+
+  const saveReminder = () => {
+    const current = JSON.parse(localStorage.getItem("medicine-reminders") || "[]")
+    current.push(medicineReminder)
+    localStorage.setItem("medicine-reminders", JSON.stringify(current))
+    setMedicineReminder({ medicine: "", time: "" })
+  }
+
+  const downloadSummary = () => {
+    const blob = new Blob(
+      [
+        `Symptoms: ${input}\n\nUrgency: ${urgency || "N/A"}\n\nAI Advice:\n${response}\n\nSummary:\n${summary}\n\nGenerated: ${new Date().toLocaleString()}`,
+      ],
+      { type: "text/plain;charset=utf-8" },
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "consultation-summary.txt"
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -109,6 +163,18 @@ export default function HealthCheck() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-4 sm:mb-6">
               {translations[index].heading}
             </h1>
+            <div className="mb-3">
+              <label className="text-sm mr-2">Language:</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as "English" | "Hindi" | "Marathi")}
+                className="bg-black border border-gray-700 rounded px-2 py-1 text-sm"
+              >
+                <option value="English">English</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Marathi">Marathi</option>
+              </select>
+            </div>
 
             <textarea
               className="w-full h-24 sm:h-32 md:h-48 p-3 sm:p-4 border border-gray-300 rounded-lg text-xs sm:text-sm md:text-base mb-3 sm:mb-4 bg-black text-white placeholder-white"
@@ -142,6 +208,19 @@ export default function HealthCheck() {
                   <h2 className="text-base sm:text-lg md:text-xl font-semibold pb-3 sm:pb-5">
                     <strong>AI Response</strong>
                   </h2>
+                  {urgency && (
+                    <span
+                      className={`inline-block mb-3 px-2 py-1 rounded text-xs ${
+                        urgency === "HIGH"
+                          ? "bg-red-900 text-red-200"
+                          : urgency === "MEDIUM"
+                            ? "bg-yellow-900 text-yellow-200"
+                            : "bg-green-900 text-green-200"
+                      }`}
+                    >
+                      Urgency: {urgency}
+                    </span>
+                  )}
                   <div className="space-y-2">
                     {response.split("\n").map((item, index) => (
                       <p
@@ -158,9 +237,45 @@ export default function HealthCheck() {
                     <strong>Detailed Response</strong>
                   </h2>
                   <div className="text-xs sm:text-sm md:text-base whitespace-pre-wrap">{summary}</div>
+                  {followUps.length > 0 && (
+                    <div className="mt-3">
+                      <h3 className="font-semibold text-sm mb-1">Follow-up Questions</h3>
+                      {followUps.map((q, i) => (
+                        <p key={i} className="text-xs sm:text-sm">- {q}</p>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    className="mt-3 py-1 px-3 bg-white text-black text-xs"
+                    size="sm"
+                    onClick={downloadSummary}
+                  >
+                    Download Consultation Summary
+                  </Button>
                 </div>
               </div>
             )}
+
+            <div className="mt-5 border border-gray-700 rounded p-3">
+              <h3 className="font-semibold text-sm mb-2">Medicine Reminder</h3>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  className="flex-1 bg-black border border-gray-700 rounded px-2 py-1 text-sm"
+                  placeholder="Medicine name"
+                  value={medicineReminder.medicine}
+                  onChange={(e) => setMedicineReminder((prev) => ({ ...prev, medicine: e.target.value }))}
+                />
+                <input
+                  type="time"
+                  className="bg-black border border-gray-700 rounded px-2 py-1 text-sm"
+                  value={medicineReminder.time}
+                  onChange={(e) => setMedicineReminder((prev) => ({ ...prev, time: e.target.value }))}
+                />
+                <Button size="sm" className="bg-white text-black" onClick={saveReminder}>
+                  Save Reminder
+                </Button>
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row sm:space-x-4 sm:space-y-0 space-y-3 sm:space-y-0 mt-4 sm:mt-6">
               <Button

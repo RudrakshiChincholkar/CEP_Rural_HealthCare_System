@@ -8,16 +8,27 @@ export default function MentalHealthPage() {
   const [message, setMessage] = useState("")
   const [response, setResponse] = useState("")
   const [severe, setSevere] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const submit = async () => {
-    const res = await fetch("/api/mental-health", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    })
-    const data = await res.json()
-    setResponse(data.response || "")
-    setSevere(Boolean(data.severe))
+    setLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/mental-health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Failed to get support response")
+      setResponse(data.response || "")
+      setSevere(Boolean(data.severe))
+    } catch (e: any) {
+      setError(e.message || "Unable to process your message right now.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -31,7 +42,10 @@ export default function MentalHealthPage() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-        <button onClick={submit} className="mt-3 px-4 py-2 bg-white text-black rounded">Get Support</button>
+        <button onClick={submit} className="mt-3 px-4 py-2 bg-white text-black rounded" disabled={loading || !message.trim()}>
+          {loading ? "Thinking..." : "Get Support"}
+        </button>
+        {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
         {response && <p className="mt-4 p-4 bg-gray-900 border border-gray-700 rounded">{response}</p>}
         {severe && <p className="mt-2 text-red-400 font-semibold">Emergency helpline: Tele-MANAS 14416</p>}
       </main>

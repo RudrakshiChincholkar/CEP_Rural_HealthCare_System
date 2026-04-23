@@ -3,17 +3,21 @@ import { getAIService } from "@/lib/ai-service"
 
 export async function POST(request: Request) {
   try {
-    const { question, area } = await request.json()
+    const { question, area, language, history } = await request.json()
     if (!question || typeof question !== "string") {
       return NextResponse.json({ error: "Question is required" }, { status: 400 })
     }
 
     const aiService = getAIService()
-    const response = await aiService.askHealthQuestion({ question, area })
+    const answer = await aiService.askHealthQuestion({ question, area, language, history })
+    const summary = await aiService.summarizeHistory({ entries: [question, answer.response] })
     return NextResponse.json({
-      response,
-      summary:
-        "This response is supportive and medically cautious. It may indicate possibilities only. Please consult a doctor for diagnosis.",
+      response: answer.response,
+      summary,
+      urgency: answer.urgency,
+      followUpQuestions: answer.followUpQuestions,
+      extracted: answer.extracted,
+      usedFallback: answer.usedFallback,
     })
   } catch (error) {
     return NextResponse.json(
