@@ -1,4 +1,7 @@
 import outbreakAlerts from "@/data/outbreak-alerts.json"
+import { promisify } from "node:util"
+import { execFile as execFileCallback } from "node:child_process"
+import path from "node:path"
 
 export interface AIService {
   askHealthQuestion(input: {
@@ -54,6 +57,12 @@ type TriageResult = {
   lifestyle: string
   disclaimer: string
   emergencyWarning?: string
+  possibleConditions?: string[]
+  nextStep?: string
+  nearbySpecialistType?: string
+  homeCare?: string[]
+  warningSigns?: string[]
+  confidenceNote?: string
 }
 
 // Rule-engine fallback that always returns medically cautious responses.
@@ -142,8 +151,61 @@ Not a diagnosis.`,
   }
 }
 
+const execFile = promisify(execFileCallback)
+
+type SwasthyaDisease = {
+  disease: string
+  confidence: number
+  severity: "mild" | "moderate" | "critical"
+  matched_symptoms: string[]
+}
+
+type SwasthyaResponse = {
+  possible_diseases: SwasthyaDisease[]
+  severity: "mild" | "moderate" | "critical"
+  action: "home_care" | "visit_doctor" | "emergency"
+  action_message: string
+  home_remedies: string[]
+  reasoning: string
+  referral_note: string
+}
+
 class LlamaAIService implements AIService {
   private fallback = new RuleEngineAIService()
+  private localEngineScript = path.join(process.cwd(), "swasthya-saathi", "bridge_cli.py")
+  private pythonBin = process.env.SWASTHYA_PYTHON_BIN || "python"
+
+  // Merged local engine adapter: calls Swasthya-Saathi before external providers.
+  private async runLocalSymptomEngine(input: {
+    symptoms: string
+    age?: number
+    history?: string
+    area?: string
+  }): Promise<SwasthyaResponse | null> {
+    const normalizedSymptoms = normalizeSymptoms(input.symptoms)
+    if (normalizedSymptoms.length === 0) return null
+
+    const payload = {
+      symptoms: normalizedSymptoms,
+      age: input.age && input.age > 0 ? input.age : 30,
+      gender: "other",
+      location: normalizeLocation(input.area),
+      history: normalizeHistory(input.history),
+      lifestyle: {},
+    }
+
+    try {
+      const { stdout } = await execFile(this.pythonBin, [this.localEngineScript, JSON.stringify(payload)], {
+        timeout: 10000,
+      })
+      const parsed = JSON.parse(stdout) as SwasthyaResponse | { error: string }
+      if ("error" in parsed) throw new Error(parsed.error)
+      return parsed
+    } catch (error) {
+      console.error("Swasthya-Saathi local engine failed, external fallback may run:", error)
+      return null
+    }
+  }
 
   private async callLlama({
     systemPrompt,
@@ -205,6 +267,23 @@ class LlamaAIService implements AIService {
     history?: Array<{ role: "user" | "assistant"; content: string }>
   }) {
     const extracted = extractHealthContext(input.question)
+    const localResult = await this.runLocalSymptomEngine({
+      symptoms: input.question,
+      age: input.question.match(/(\d{1,2})\s?(year|yr)/i)?.[1] ? Number(input.question.match(/(\d{1,2})\s?(year|yr)/i)?.[1]) : undefined,
+      history: input.history?.map((h) => h.content).join(" "),
+      area: input.area,
+    })
+    if (localResult) {
+      const mapped = mapLocalEngineToTriage(localResult)
+      return {
+        response: buildHealthAdviceResponse(mapped),
+        urgency: mapped.urgency,
+        followUpQuestions: buildFollowUpQuestions(extracted),
+        extracted,
+        usedFallback: false,
+      }
+    }
+
     const areaAlert = input.area
       ? outbreakAlerts.find((item) => item.area.toLowerCase() === input.area.toLowerCase())
       : null
@@ -279,6 +358,17 @@ Make advice concrete and symptom-specific. If details are missing, ask clear fol
     habits?: string
     diseaseHistory?: string
   }): Promise<TriageResult> {
+    const localResult = await this.runLocalSymptomEngine({
+      symptoms: input.symptoms,
+      age: input.age,
+      history: `${input.history || ""} ${input.diseaseHistory || ""}`.trim(),
+      area: input.area,
+    })
+    if (localResult) {
+      // Preserve existing API keys while enriching with Swasthya-Saathi structured fields.
+      return mapLocalEngineToTriage(localResult)
+    }
+
     const alert = outbreakAlerts.find((item) => item.area.toLowerCase() === input.area.toLowerCase())
     const severe = emergencyKeywords.some((key) => input.symptoms.toLowerCase().includes(key))
 
@@ -399,4 +489,100 @@ function extractFollowUpFromResponse(response: string, extracted: { emergencySig
     .filter((line) => line.startsWith("-") && line.toLowerCase().includes("?"))
   if (lines.length > 0) return lines.map((line) => line.replace(/^-+\s*/, "")).slice(0, 4)
   return buildFollowUpQuestions({ ...extracted })
+}
+
+function mapSeverityToUrgency(severity: SwasthyaResponse["severity"]): "LOW" | "MEDIUM" | "HIGH" {
+  if (severity === "critical") return "HIGH"
+  if (severity === "moderate") return "MEDIUM"
+  return "LOW"
+}
+
+function mapLocalEngineToTriage(local: SwasthyaResponse): TriageResult {
+  const possibleConditions = local.possible_diseases.map((item) => item.disease.toLowerCase())
+  const urgency = mapSeverityToUrgency(local.severity)
+  const top = local.possible_diseases[0]
+
+  return {
+    possibleCondition: possibleConditions[0] || "undifferentiated illness",
+    possibleConditions,
+    urgency,
+    explanation: local.reasoning,
+    remedy: local.action_message,
+    lifestyle: local.referral_note,
+    disclaimer: "This is supportive guidance, not a confirmed diagnosis. Please consult a qualified doctor.",
+    emergencyWarning: local.action === "emergency" ? "Emergency warning: seek immediate hospital care." : undefined,
+    nextStep: local.action === "home_care" ? "Continue home care and monitor for 48 hours." : local.action === "visit_doctor" ? "Consult a doctor/PHC within 24 hours." : "Seek emergency care immediately.",
+    nearbySpecialistType: specialistFromDisease(top?.disease || ""),
+    homeCare: local.home_remedies,
+    warningSigns: deriveWarningSigns(local),
+    confidenceNote: top ? `Top condition confidence: ${top.confidence}%.` : "Low confidence due to limited symptom overlap.",
+  }
+}
+
+function buildHealthAdviceResponse(result: TriageResult) {
+  return `Possible conditions:\n- ${result.possibleConditions?.join("\n- ") || result.possibleCondition}\n\nUrgency: ${result.urgency}\nReason: ${result.explanation}\nNext step: ${result.nextStep}\nNearby specialist: ${result.nearbySpecialistType}\nHome care:\n- ${(result.homeCare || []).join("\n- ") || result.remedy}\nWarning signs:\n- ${(result.warningSigns || []).join("\n- ") || "Worsening symptoms"}\nConfidence note: ${result.confidenceNote}`
+}
+
+function normalizeSymptoms(text: string): string[] {
+  const dictionary: Record<string, string> = {
+    fever: "high_fever",
+    highfever: "high_fever",
+    cough: "persistent_cough",
+    cold: "runny_nose",
+    sneezing: "sneezing",
+    throat: "sore_throat",
+    headache: "headache",
+    severeheadache: "severe_headache",
+    chestpain: "chest_pain",
+    breathless: "difficulty_breathing",
+    breathing: "difficulty_breathing",
+    vomiting: "vomiting",
+    nausea: "nausea",
+    stomachache: "stomach_pain",
+    stomachpain: "stomach_pain",
+    diarrhea: "diarrhea",
+    dizzy: "dizziness",
+    dizziness: "dizziness",
+    weakness: "weakness",
+    rash: "rash",
+  }
+
+  return Array.from(
+    new Set(
+      text
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, " ")
+        .split(/\s+/)
+        .map((word) => dictionary[word] || "")
+        .filter(Boolean),
+    ),
+  )
+}
+
+function normalizeHistory(history?: string): string[] {
+  if (!history) return []
+  return history
+    .toLowerCase()
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function normalizeLocation(area?: string): string {
+  return area ? `rural_${area.toLowerCase().replace(/[^a-z0-9]+/g, "_")}` : "rural_unknown"
+}
+
+function specialistFromDisease(disease: string): string {
+  const value = disease.toLowerCase()
+  if (value.includes("hypertension") || value.includes("heart")) return "Cardiologist"
+  if (value.includes("gastro") || value.includes("typhoid")) return "Gastroenterologist"
+  if (value.includes("tuberculosis")) return "Pulmonologist"
+  return "General Physician"
+}
+
+function deriveWarningSigns(local: SwasthyaResponse): string[] {
+  if (local.action === "emergency") {
+    return ["breathing difficulty", "chest pain", "confusion", "unconsciousness"]
+  }
+  return ["persistent high fever", "symptoms worsening after 48 hours", "new severe pain"]
 }
