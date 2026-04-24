@@ -39,15 +39,17 @@ export interface AIService {
     disclaimer: string
     emergencyWarning?: string
   }>
-  summarizeHistory(input: { entries: string[] }): Promise<string>
+  summarizeHistory(input: { entries: string[]; language?: "English" | "Hindi" | "Marathi" }): Promise<string>
   mentalHealthResponse(input: { message: string }): Promise<{ response: string; severe: boolean }>
 }
 
 const emergencyKeywords = ["chest pain", "breathing", "unconscious", "stroke", "fainting", "seizure"]
 const severeMentalKeywords = ["self harm", "suicide", "end my life", "can't live", "hopeless", "kill myself"]
 
-const LLAMA_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-const DEFAULT_LLAMA_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+const DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 type TriageResult = {
   possibleCondition: string
@@ -136,7 +138,7 @@ Not a diagnosis.`,
     }
   }
 
-  async summarizeHistory(input: { entries: string[] }) {
+  async summarizeHistory(input: { entries: string[]; language?: "English" | "Hindi" | "Marathi" }) {
     if (!input.entries.length) return "No history entries available."
     return `Recent history summary: ${input.entries.slice(0, 3).join(" | ")}. Please keep regular follow-up with your doctor.`
   }
@@ -216,19 +218,27 @@ class LlamaAIService implements AIService {
     userPrompt: string
     maxTokens?: number
   }): Promise<string | null> {
-    const apiKey = process.env.LLAMA_API_KEY
-    const model = process.env.LLAMA_MODEL || DEFAULT_LLAMA_MODEL
+    const configuredKey = process.env.OPENROUTER_API_KEY || process.env.LLAMA_API_KEY || process.env.GROQ_API_KEY || ""
+    const apiKey = configuredKey.trim()
+    const configuredModel = (process.env.LLAMA_MODEL || "").trim()
     if (!apiKey) return null
+    const provider = resolveLLMProvider(apiKey, configuredModel)
 
     const makeRequest = async () => {
-      const response = await fetch(LLAMA_ENDPOINT, {
+      const response = await fetch(provider.endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
+          ...(provider.provider === "openrouter"
+            ? {
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "GramAarogya",
+              }
+            : {}),
         },
         body: JSON.stringify({
-          model,
+          model: provider.model,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -240,7 +250,7 @@ class LlamaAIService implements AIService {
 
       if (!response.ok) {
         const body = await response.text()
-        throw new Error(`Llama provider error ${response.status}: ${body}`)
+        throw new Error(`LLM provider error ${response.status} (${provider.provider}, ${provider.model}): ${body}`)
       }
 
       const data = await response.json()
@@ -250,11 +260,11 @@ class LlamaAIService implements AIService {
     try {
       return (await makeRequest()) || null
     } catch (firstError) {
-      console.error("Llama request failed, retrying once:", firstError)
+      console.error("LLM request failed, retrying once:", firstError)
       try {
         return (await makeRequest()) || null
       } catch (secondError) {
-        console.error("Llama retry failed, using fallback provider:", secondError)
+        console.error("LLM retry failed, using fallback rule engine:", secondError)
         return null
       }
     }
@@ -291,9 +301,10 @@ class LlamaAIService implements AIService {
     const language = input.language || "English"
     const emergency = extracted.emergencySignals.length > 0
     const compactHistory = (input.history || []).slice(-6).map((h) => `${h.role}: ${h.content}`).join("\n")
+    const languageRule = toLanguageRule(language)
     const llamaText = await this.callLlama({
       systemPrompt:
-        "You are an expert primary-care triage assistant for India. Give specific, practical, symptom-aware advice. Never claim confirmed diagnosis. Always use medically cautious wording like 'possible' and 'may indicate'.",
+        `You are an expert primary-care triage assistant for India. Give specific, practical, symptom-aware advice. Never claim confirmed diagnosis. Always use medically cautious wording like 'possible' and 'may indicate'. ${languageRule}`,
       userPrompt: `Question: ${input.question}
 Area: ${input.area || "Not provided"}
 Outbreak context: ${areaAlert ? `${areaAlert.area} has ${areaAlert.disease} risk ${areaAlert.risk} because ${areaAlert.reason}` : "No area outbreak context available"}
@@ -327,7 +338,8 @@ Follow-up questions:
 Safety note:
 Not a diagnosis. Consult a qualified doctor.
 
-Make advice concrete and symptom-specific. If details are missing, ask clear follow-up questions.`,
+Make advice concrete and symptom-specific. If details are missing, ask clear follow-up questions.
+IMPORTANT LANGUAGE RULE: ${languageRule}`,
     })
 
     if (llamaText) {
@@ -404,12 +416,14 @@ Rules:
     return this.fallback.triageSymptoms(input)
   }
 
-  async summarizeHistory(input: { entries: string[] }) {
+  async summarizeHistory(input: { entries: string[]; language?: "English" | "Hindi" | "Marathi" }) {
+    const languageRule = toLanguageRule(input.language || "English")
     const llamaText = await this.callLlama({
       systemPrompt:
-        "You summarize patient history in short medically cautious language. Never give definitive diagnosis.",
+        `You summarize patient history in short medically cautious language. Never give definitive diagnosis. ${languageRule}`,
       userPrompt: `Summarize these patient timeline entries in 3-4 concise bullet points:
-${input.entries.map((entry, idx) => `${idx + 1}. ${entry}`).join("\n")}`,
+${input.entries.map((entry, idx) => `${idx + 1}. ${entry}`).join("\n")}
+IMPORTANT LANGUAGE RULE: ${languageRule}`,
       maxTokens: 220,
     })
 
@@ -440,6 +454,31 @@ If non-severe stress, include:
       }
     }
     return this.fallback.mentalHealthResponse(input)
+  }
+}
+
+function resolveLLMProvider(apiKey: string, configuredModel: string): {
+  provider: "openrouter" | "groq"
+  endpoint: string
+  model: string
+} {
+  // Auto-detect provider by key format so API keys are called against correct endpoint.
+  if (apiKey.startsWith("gsk_")) {
+    const model =
+      configuredModel && !configuredModel.includes("/") && !configuredModel.includes(":free")
+        ? configuredModel
+        : DEFAULT_GROQ_MODEL
+    return {
+      provider: "groq",
+      endpoint: GROQ_ENDPOINT,
+      model,
+    }
+  }
+
+  return {
+    provider: "openrouter",
+    endpoint: OPENROUTER_ENDPOINT,
+    model: configuredModel || DEFAULT_OPENROUTER_MODEL,
   }
 }
 
@@ -585,4 +624,10 @@ function deriveWarningSigns(local: SwasthyaResponse): string[] {
     return ["breathing difficulty", "chest pain", "confusion", "unconsciousness"]
   }
   return ["persistent high fever", "symptoms worsening after 48 hours", "new severe pain"]
+}
+
+function toLanguageRule(language: "English" | "Hindi" | "Marathi") {
+  if (language === "Hindi") return "Respond ONLY in Hindi (Devanagari script). Do not mix languages."
+  if (language === "Marathi") return "Respond ONLY in Marathi (Devanagari script). Do not mix languages."
+  return "Respond ONLY in English. Do not use Hindi or Marathi words/scripts."
 }

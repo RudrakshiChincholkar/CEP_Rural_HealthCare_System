@@ -1,0 +1,30 @@
+{
+  "ngos": [
+    {
+      "name": "Sehat Gram Foundation",
+      "area": "Kurla",
+      "services": ["awareness camps", "maternal support", "medicine distribution"],
+      "contact": "+91-9001001001"
+    },
+    {
+      "name": "Jan Arogya Trust",
+      "area": "Andheri",
+      "services": ["screening camps", "sanitation training"],
+      "contact": "+91-9001001002"
+    }
+  ],
+  "volunteers": [
+    {
+      "name": "Asha Worker Meena",
+      "area": "Kurla",
+      "role": "ASHA volunteer",
+      "contact": "+91-9001002001"
+    },
+    {
+      "name": "Youth Volunteer Imran",
+      "area": "Andheri",
+      "role": "emergency transport coordination",
+      "contact": "+91-9001002002"
+    }
+  ]
+}

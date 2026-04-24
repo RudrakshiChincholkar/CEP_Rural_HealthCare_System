@@ -6,6 +6,7 @@ export type Doctor = {
   contact: string
   experience: string
   consultationFee: number
+  distanceKm: number
   rating: number
   languages: string[]
   availability: string
@@ -32,6 +33,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000001",
     experience: "9 years",
     consultationFee: 700,
+    distanceKm: 2.1,
     rating: 4.4,
     languages: ["English", "Hindi", "Marathi"],
     availability: "Mon-Sat, 10:00 AM - 6:00 PM",
@@ -45,6 +47,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000002",
     experience: "12 years",
     consultationFee: 1000,
+    distanceKm: 4.3,
     rating: 4.6,
     languages: ["English", "Hindi", "Gujarati"],
     availability: "Mon-Fri, 11:00 AM - 7:00 PM",
@@ -58,6 +61,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000003",
     experience: "11 years",
     consultationFee: 900,
+    distanceKm: 3.6,
     rating: 4.5,
     languages: ["English", "Hindi", "Tamil"],
     availability: "Mon-Sat, 9:00 AM - 4:00 PM",
@@ -71,6 +75,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000004",
     experience: "15 years",
     consultationFee: 1500,
+    distanceKm: 5.4,
     rating: 4.7,
     languages: ["English", "Hindi", "Urdu"],
     availability: "Mon-Sat, 12:00 PM - 8:00 PM",
@@ -84,6 +89,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000005",
     experience: "10 years",
     consultationFee: 1200,
+    distanceKm: 4.9,
     rating: 4.6,
     languages: ["English", "Hindi", "Marathi"],
     availability: "Mon-Fri, 9:00 AM - 5:00 PM",
@@ -97,6 +103,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000006",
     experience: "8 years",
     consultationFee: 900,
+    distanceKm: 2.8,
     rating: 4.8,
     languages: ["English", "Hindi", "Marathi"],
     availability: "Tue-Sun, 2:00 PM - 9:00 PM",
@@ -110,6 +117,7 @@ export const DOCTORS: Doctor[] = [
     contact: "+91-9000000007",
     experience: "13 years",
     consultationFee: 1300,
+    distanceKm: 6.2,
     rating: 4.5,
     languages: ["English", "Hindi", "Marathi"],
     availability: "Mon-Sat, 10:30 AM - 6:30 PM",

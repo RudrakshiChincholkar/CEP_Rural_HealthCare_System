@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
+import { addPatientHistory } from "@/lib/offline-health"
+import { speakText, startVoiceInput, getSimpleLanguageCode } from "@/lib/accessibility-hooks"
 
 const translations = [
   { lang: "English", heading: "Health Check", placeholder: "Describe your symptoms..." },
@@ -38,6 +40,7 @@ export default function HealthCheck() {
   const [currentMessage, setCurrentMessage] = useState("")
   const [currentIndex, setCurrentIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [regionalDiseaseData, setRegionalDiseaseData] = useState<{ commonDiseases: string[]; preventionTips: string[] } | null>(null)
   const router = useRouter()
   const messageRef = useRef(null)
 
@@ -125,6 +128,13 @@ export default function HealthCheck() {
         urgency: data.urgency || "MEDIUM",
       })
       localStorage.setItem("patient-history", JSON.stringify(consultHistory.slice(0, 50)))
+      addPatientHistory({
+        symptoms: input,
+        urgency: data.urgency || "MEDIUM",
+        explanation: data.response || "",
+      })
+      const diseaseRes = await fetch("/api/location-disease?area=kurla")
+      setRegionalDiseaseData(await diseaseRes.json())
     } catch (error) {
       setError("Unable to fetch AI advice right now. Please try again.")
     }
@@ -137,6 +147,19 @@ export default function HealthCheck() {
     current.push(medicineReminder)
     localStorage.setItem("medicine-reminders", JSON.stringify(current))
     setMedicineReminder({ medicine: "", time: "" })
+  }
+
+  const readGuidance = () => {
+    if (!response) return
+    speakText(response, getSimpleLanguageCode(language))
+  }
+
+  const startVoiceGuidedInput = () => {
+    startVoiceInput(
+      (text) => setInput((prev) => `${prev} ${text}`.trim()),
+      getSimpleLanguageCode(language),
+      () => setError("Voice input is not supported in this browser."),
+    )
   }
 
   const downloadSummary = () => {
@@ -163,6 +186,7 @@ export default function HealthCheck() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-4 sm:mb-6">
               {translations[index].heading}
             </h1>
+            <p className="text-yellow-300 text-sm mb-4">This system provides guidance, not medical diagnosis.</p>
             <div className="mb-3">
               <label className="text-sm mr-2">Language:</label>
               <select
@@ -190,6 +214,9 @@ export default function HealthCheck() {
               disabled={loading}
             >
               {loading ? <span ref={messageRef}>{currentMessage}</span> : "Get AI Health Advice"}
+            </Button>
+            <Button className="w-full sm:w-auto mb-4 sm:mb-6 py-2 px-3 sm:px-4 bg-blue-700 text-white rounded-lg text-sm sm:text-base ml-0 sm:ml-3" size="lg" onClick={startVoiceGuidedInput}>
+              Voice Input
             </Button>
 
             {loading && (
@@ -252,7 +279,17 @@ export default function HealthCheck() {
                   >
                     Download Consultation Summary
                   </Button>
+                  <Button className="mt-3 ml-2 py-1 px-3 bg-blue-700 text-white text-xs" size="sm" onClick={readGuidance}>
+                    Read Aloud
+                  </Button>
                 </div>
+              </div>
+            )}
+            {regionalDiseaseData && (
+              <div className="mt-4 p-4 rounded border border-gray-700">
+                <p className="font-semibold">Location Disease Insight:</p>
+                <p className="text-sm text-gray-300">Common: {regionalDiseaseData.commonDiseases.join(", ")}</p>
+                <p className="text-sm text-gray-300">Prevention: {regionalDiseaseData.preventionTips.join(" | ")}</p>
               </div>
             )}
 

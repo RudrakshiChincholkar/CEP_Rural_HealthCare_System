@@ -1,0 +1,17 @@
+[
+  {
+    "region": "kurla",
+    "commonDiseases": ["viral flu", "dengue", "gastroenteritis"],
+    "preventionTips": ["use mosquito protection", "drink boiled water", "wash hands frequently"]
+  },
+  {
+    "region": "andheri",
+    "commonDiseases": ["respiratory infection", "allergic rhinitis", "dehydration"],
+    "preventionTips": ["wear masks in dusty areas", "stay hydrated", "avoid smoke exposure"]
+  },
+  {
+    "region": "pune",
+    "commonDiseases": ["seasonal flu", "typhoid", "heat stress"],
+    "preventionTips": ["safe drinking water", "avoid street food in outbreaks", "avoid peak heat hours"]
+  }
+]

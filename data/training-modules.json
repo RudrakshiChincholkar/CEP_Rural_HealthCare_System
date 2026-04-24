@@ -1,0 +1,23 @@
+[
+  {
+    "id": "tm-1",
+    "title": "Hand Hygiene Basics",
+    "level": "Beginner",
+    "duration": "10 mins",
+    "content": "Wash hands with soap for 20 seconds before meals, after toilet use, and after field work."
+  },
+  {
+    "id": "tm-2",
+    "title": "Safe Water Practices",
+    "level": "Beginner",
+    "duration": "12 mins",
+    "content": "Use boiled or filtered water for drinking. Keep storage vessels covered and clean."
+  },
+  {
+    "id": "tm-3",
+    "title": "Recognizing Emergency Signs",
+    "level": "Intermediate",
+    "duration": "15 mins",
+    "content": "Chest pain, severe breathlessness, bleeding, confusion, and unconsciousness require urgent hospital care."
+  }
+]

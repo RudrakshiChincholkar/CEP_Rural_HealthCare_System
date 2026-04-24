@@ -11,6 +11,8 @@ const cards = [
   { href: "/alerts", title: "Alerts & Schemes", desc: "Outbreak, disaster, vaccination, and scheme notifications." },
   { href: "/telemedicine", title: "Telemedicine", desc: "Book dummy online consultations and video placeholders." },
   { href: "/history", title: "Patient History", desc: "Track symptoms, assessments, doctor visits, and notes." },
+  { href: "/training", title: "Health Training", desc: "Offline-friendly local health education modules." },
+  { href: "/community-support", title: "NGO & Volunteers", desc: "Local community support directories and contacts." },
   { href: "/leaderboard", title: "Community", desc: "Gamification points and rural health leaderboard." },
   { href: "/profile", title: "Profile", desc: "Personal details, BMI helper, and reminder settings." },
 ]

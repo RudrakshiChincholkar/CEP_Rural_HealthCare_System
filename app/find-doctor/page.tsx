@@ -16,6 +16,7 @@ type Doctor = {
   contact: string
   experience: string
   consultationFee: number
+  distanceKm: number
   rating: number
   languages: string[]
   availability: string
@@ -133,6 +134,10 @@ export default function FindDoctor() {
                       <p className="flex items-start">
                         <span className="font-medium min-w-16 sm:min-w-24 inline-block">Fee:</span>
                         <span>INR {doctor.consultationFee}</span>
+                      </p>
+                      <p className="flex items-start">
+                        <span className="font-medium min-w-16 sm:min-w-24 inline-block">Distance:</span>
+                        <span>{doctor.distanceKm} km</span>
                       </p>
                       <p className="flex items-start">
                         <span className="font-medium min-w-16 sm:min-w-24 inline-block">Rating:</span>

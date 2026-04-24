@@ -92,6 +92,12 @@ export default function Navbar() {
           <Link href="/history" className="transition-colors hover:text-primary">
             History
           </Link>
+          <Link href="/training" className="transition-colors hover:text-primary">
+            Training
+          </Link>
+          <Link href="/community-support" className="transition-colors hover:text-primary">
+            Community Support
+          </Link>
           <Link href="/profile" className="transition-colors hover:text-primary">
             Profile
           </Link>
@@ -183,6 +189,12 @@ export default function Navbar() {
               </Link>
               <Link href="/history" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
                 History
+              </Link>
+              <Link href="/training" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Training
+              </Link>
+              <Link href="/community-support" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
+                Community Support
               </Link>
               <Link href="/profile" className="block py-2 text-base font-medium hover:text-primary transition" onClick={() => setDropdownOpen(false)}>
                 Profile

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
     const aiService = getAIService()
     const answer = await aiService.askHealthQuestion({ question, area, language, history })
-    const summary = await aiService.summarizeHistory({ entries: [question, answer.response] })
+    const summary = await aiService.summarizeHistory({ entries: [question, answer.response], language })
     return NextResponse.json({
       response: answer.response,
       summary,
